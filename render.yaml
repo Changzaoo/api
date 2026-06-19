@@ -9,7 +9,7 @@ services:
     runtime: node
     plan: starter
     region: oregon
-    branch: main
+    branch: master
     buildCommand: npm install
     startCommand: node server.js
     healthCheckPath: /health
