@@ -1,0 +1,34 @@
+# ============================================================
+#  Nexus Bridge — Blueprint do Render
+#  Suba via: Render Dashboard -> New -> Blueprint (aponte para este repo).
+#  Depois mapeie o domínio api.nexusholding.xyz no serviço (ver README).
+# ============================================================
+services:
+  - type: web
+    name: nexus-bridge
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: main
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ALLOWED_ORIGINS
+        value: https://www.nexusholding.xyz,https://nexusholding.vercel.app
+      - key: RATE_LIMIT_WINDOW_MS
+        value: "60000"
+      - key: RATE_LIMIT_MAX
+        value: "120"
+      # Segredos: definir manualmente no painel (sync:false NÃO grava valor aqui).
+      - key: KEY_CRM
+        sync: false
+      - key: KEY_MIDIA
+        sync: false
+      - key: MIDIA_URL
+        sync: false
+      - key: MIDIA_UPSTREAM_KEY
+        sync: false
