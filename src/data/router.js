@@ -25,6 +25,30 @@ import { sendError, forbidden, badRequest, unknownDatasource } from "../util/err
 
 const UPLOAD_MAX = Number(process.env.DATA_UPLOAD_MAX) || 26_214_400; // 25 MiB
 
+// Defense-in-depth: a Data API NUNCA expõe as tabelas internas da Bridge
+// nem schemas reservados do Postgres/Supabase, MESMO que o app tenha
+// curinga "*". As operações internas (reload de apps, auditoria) chamam
+// o adapter direto, sem passar por aqui — então não são afetadas.
+const SUPABASE_BLOCKED_SCHEMAS = new Set([
+  "auth", "storage", "pg_catalog", "information_schema", "extensions",
+  "graphql", "graphql_public", "realtime", "vault", "supabase_functions", "pgsodium",
+]);
+const SUPABASE_BLOCKED_TABLES = new Set(["nexus_apps", "audit_log"]);
+
+function guardSupabaseResource(dsId, resource) {
+  if (dsId !== "supabase") return;
+  if (resource.startsWith("storage:")) return; // storage tem allowlist própria por bucket
+  const i = resource.indexOf(".");
+  const schema = (i >= 0 ? resource.slice(0, i) : "public").toLowerCase();
+  const tbl = (i >= 0 ? resource.slice(i + 1) : resource).toLowerCase();
+  if (schema !== "public" && (SUPABASE_BLOCKED_SCHEMAS.has(schema) || schema.startsWith("pg_"))) {
+    throw forbidden(`schema "${schema}" não é acessível pela Data API`);
+  }
+  if (schema === "public" && SUPABASE_BLOCKED_TABLES.has(tbl)) {
+    throw forbidden(`tabela interna "${tbl}" não é acessível pela Data API`);
+  }
+}
+
 // Envolve handler async: erros viram resposta JSON padronizada.
 const h = (fn) => (req, res) => Promise.resolve(fn(req, res)).catch((e) => sendError(res, e));
 
@@ -42,6 +66,7 @@ export function makeDataRouter(getRegistry, getDatasources) {
     if (!canAccess(req.principal, dsId, resource, mode)) {
       throw forbidden(`sem permissão de ${mode} em "${dsId}:${resource}"`);
     }
+    guardSupabaseResource(dsId, resource); // bloqueia tabelas internas/schemas reservados
     req.dataMeta = { datasource: dsId, resource, mode };
     return ds.getAdapter();
   }

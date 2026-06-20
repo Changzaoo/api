@@ -33,7 +33,7 @@ import { measure } from "./src/telemetry/measure.js";
 import { snapshot } from "./src/telemetry/metrics.js";
 import { sseHandler, issueTicket } from "./src/telemetry/sse.js";
 import { startAudit } from "./src/telemetry/audit.js";
-import { sendError, forbidden, badRequest } from "./src/util/errors.js";
+import { sendError, forbidden, badRequest, ApiError } from "./src/util/errors.js";
 import {
   startDynamicApps,
   getDynamicRegistry,
@@ -245,7 +245,7 @@ v1.post("/admin/apps", requireAdmin, async (req, res) => {
     );
     res.status(201).json(result); // key exibida UMA VEZ; não é armazenada
   } catch (e) {
-    sendError(res, badRequest(e.message));
+    sendError(res, e instanceof ApiError ? e : badRequest(e.message));
   }
 });
 
@@ -254,7 +254,7 @@ v1.delete("/admin/apps/:id", requireAdmin, async (req, res) => {
     await revokeDynamicApp(req.params.id);
     res.json({ ok: true, revoked: req.params.id });
   } catch (e) {
-    sendError(res, badRequest(e.message));
+    sendError(res, e instanceof ApiError ? e : badRequest(e.message));
   }
 });
 

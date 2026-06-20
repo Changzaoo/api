@@ -7,6 +7,7 @@
 // ============================================================
 
 import { createHash, randomBytes } from "node:crypto";
+import { ApiError } from "./util/errors.js";
 
 const REFRESH_MS = 60_000;
 const TABLE = "nexus_apps";
@@ -81,8 +82,8 @@ export async function startDynamicApps(getDatasources) {
   }
   try {
     _adapter = await ds.getAdapter();
-  } catch {
-    console.warn("[dynamic-apps] falha ao inicializar adapter Supabase.");
+  } catch (e) {
+    console.warn("[dynamic-apps] falha ao inicializar adapter Supabase:", e.message);
     return;
   }
   await reload();
@@ -111,7 +112,7 @@ export function listDynamicApps() {
  * Retorna { id, name, key } — a key é exibida UMA VEZ e nunca mais.
  */
 export async function createDynamicApp({ id, name, data = {}, allow = [] }, createdBy = "") {
-  if (!_adapter) throw new Error("Supabase não configurado — apps dinâmicos indisponíveis.");
+  if (!_adapter) throw new ApiError(503, "datasource_unconfigured", "Supabase não configurado — apps dinâmicos indisponíveis.");
 
   const slug = String(id).toLowerCase().replace(/[^a-z0-9_-]/g, "");
   if (!slug) throw new Error("id inválido (use letras, números, _ ou -).");
@@ -146,7 +147,7 @@ export async function createDynamicApp({ id, name, data = {}, allow = [] }, crea
  * Revoga um app (soft delete: active = false).
  */
 export async function revokeDynamicApp(id) {
-  if (!_adapter) throw new Error("Supabase não configurado.");
+  if (!_adapter) throw new ApiError(503, "datasource_unconfigured", "Supabase não configurado.");
   await _adapter.update(TABLE, id, { active: false });
   const app = _apps.get(id);
   if (app) {

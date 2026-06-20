@@ -29,23 +29,21 @@ const cat = await req("GET", "/v1/data/");
 const supa = (cat.json?.datasources || []).find((d) => d.id === "supabase");
 ok("supabase ready=true no servidor local", !!supa?.ready);
 
-const read = await req("GET", "/v1/data/supabase/nexus_apps?limit=1");
-ok("leitura supabase 200", read.status === 200, "status=" + read.status);
-ok("retorna items[]", Array.isArray(read.json?.items));
+// --- Blindagem de segurança (defense-in-depth) ---
+// Mesmo com curinga "*", a Data API bloqueia tabelas internas e
+// schemas reservados.
+const blkApps = await req("GET", "/v1/data/supabase/nexus_apps?limit=1");
+ok("BLOQUEIA nexus_apps (403)", blkApps.status === 403, "status=" + blkApps.status);
+const blkAudit = await req("GET", "/v1/data/supabase/audit_log?limit=1");
+ok("BLOQUEIA audit_log (403)", blkAudit.status === 403, "status=" + blkAudit.status);
+const blkSchema = await req("GET", "/v1/data/supabase/auth.users?limit=1");
+ok("BLOQUEIA schema auth (403)", blkSchema.status === 403, "status=" + blkSchema.status);
 
-// Escrita: linha sentinela com active=false (o reload só carrega active=true,
-// então nunca vira um app fantasma). Cria -> lê -> apaga.
-const sid = "selftest-" + Math.random().toString(36).slice(2, 8);
-const w = await req("POST", `/v1/data/supabase/nexus_apps?id=${sid}`, {
-  id: sid, name: "selftest", key_hash: "selftest-" + sid, key_prefix: "selftest", data: {}, allow: [], active: false,
-});
-const wrote = ok("escrita (cria linha) 201", w.status === 201, "status=" + w.status + " " + JSON.stringify(w.json));
-if (wrote) {
-  const g = await req("GET", `/v1/data/supabase/nexus_apps/${sid}`);
-  ok("lê a linha criada", g.status === 200 && g.json?.name === "selftest", "status=" + g.status);
-  const d = await req("DELETE", `/v1/data/supabase/nexus_apps/${sid}`);
-  ok("apaga a linha", d.status === 200, "status=" + d.status);
-}
+// Positivo: tabela de negócio comum PASSA pela blindagem e chega no
+// adapter. Uma tabela inexistente prova que o guard não bloqueou
+// (vira 502/404 do banco, nunca 403/401).
+const legit = await req("GET", "/v1/data/supabase/bridge_selftest_xyz?limit=1");
+ok("tabela de negócio passa o guard (não 403)", legit.status !== 403 && legit.status !== 401, "status=" + legit.status);
 
 // Cleanup: remove o app de teste do banco.
 const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
