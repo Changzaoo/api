@@ -107,20 +107,6 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false, // permite carregar o SDK do Firebase via CDN
 }));
 
-// CORS: só libera browsers das origens configuradas. Server-to-server
-// (sem header Origin) e o painel same-origin passam direto.
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
-  .split(",").map((s) => s.trim()).filter(Boolean);
-app.use(cors({
-  origin(origin, cb) {
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-    cb(new Error("origem não permitida pelo CORS"));
-  },
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "x-api-key", "x-request-id", "Idempotency-Key"],
-  maxAge: 86400,
-}));
-
 app.use(express.json({ limit: "1mb" }));
 
 morgan.token("appid", (req) => req.principal?.id || req.caller?.id || "-");
@@ -212,6 +198,19 @@ v1.get("/apps", (_req, res) => {
     })),
   });
 });
+
+// CORS: só em /v1 (APIs). Estáticos do painel são same-origin — não precisam.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
+  .split(",").map((s) => s.trim()).filter(Boolean);
+v1.use(cors({
+  origin(origin, cb) {
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    cb(new Error("origem não permitida pelo CORS"));
+  },
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "x-api-key", "x-request-id", "Idempotency-Key"],
+  maxAge: 86400,
+}));
 
 // Data API central (leitura/escrita em Firestore + Supabase).
 v1.use("/data", dataWriteLimiter, dataRouter);
