@@ -41,6 +41,7 @@ import {
   listDynamicApps,
   createDynamicApp,
   revokeDynamicApp,
+  syncDynamicApps,
 } from "./src/dynamic-apps.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -235,6 +236,16 @@ const requireAdmin = (req, res, next) => {
   if (req.principal?.type !== "user") return sendError(res, forbidden("exclusivo do painel admin"));
   next();
 };
+
+// Sincroniza (recarrega) os apps dinâmicos do banco — botão do painel.
+v1.post("/sync", requireAdmin, async (_req, res) => {
+  try {
+    const apps = await syncDynamicApps();
+    res.json({ ok: true, apps });
+  } catch (e) {
+    sendError(res, e instanceof ApiError ? e : badRequest(e.message));
+  }
+});
 
 // Admin: gerenciamento de apps dinâmicos (geração de chaves nxs_).
 v1.get("/admin/apps", requireAdmin, (_req, res) => {

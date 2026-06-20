@@ -7,7 +7,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {
   getAuth, signInWithEmailAndPassword, onIdTokenChanged, signOut,
-  setPersistence, browserLocalPersistence,
+  setPersistence, browserLocalPersistence, browserSessionPersistence,
 } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 
 // Configuração web do Firebase (garden-backup). A apiKey web é
@@ -26,7 +26,17 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
-// Mantém a sessão entre reloads.
-setPersistence(auth, browserLocalPersistence).catch(() => {});
+/**
+ * Define a persistência da sessão antes do login:
+ *  - remember=true  → browserLocal (sobrevive a fechar o navegador).
+ *  - remember=false → browserSession (só enquanto a aba estiver aberta).
+ */
+export function applyPersistence(remember) {
+  return setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence)
+    .catch(() => {});
+}
+
+// Padrão: lembrar (mantém a sessão entre reloads).
+applyPersistence(true);
 
 export { signInWithEmailAndPassword, onIdTokenChanged, signOut };

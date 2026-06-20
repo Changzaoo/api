@@ -35,6 +35,18 @@ export class GeoMap {
       });
     }
 
+    // Arcos permanentes Bridge <-> fontes: a "corrente" sempre fluindo.
+    const bb = this.servers.bridge;
+    if (bb && typeof bb.lat === "number") {
+      for (const [id, s] of Object.entries(this.servers)) {
+        if (id === "bridge" || !s || typeof s.lat !== "number") continue;
+        this.arcs.push({
+          startLat: bb.lat, startLng: bb.lng, endLat: s.lat, endLng: s.lng,
+          color: s.kind === "src" ? COL.src : COL.app, persist: true,
+        });
+      }
+    }
+
     this.world = Globe()(this.el)
       .globeImageUrl("//unpkg.com/three-globe/example/img/earth-dark.jpg")
       .bumpImageUrl("//unpkg.com/three-globe/example/img/earth-topology.png")
@@ -99,8 +111,10 @@ export class GeoMap {
   _arc(sLat, sLng, eLat, eLng, color) {
     this.arcs.push({ startLat: sLat, startLng: sLng, endLat: eLat, endLng: eLng, color, born: performance.now() });
     const now = performance.now();
-    this.arcs = this.arcs.filter((a) => now - a.born < 5000);
-    if (this.arcs.length > 70) this.arcs = this.arcs.slice(-70);
+    const persist = this.arcs.filter((a) => a.persist);
+    let trans = this.arcs.filter((a) => !a.persist && now - a.born < 5000);
+    if (trans.length > 60) trans = trans.slice(-60);
+    this.arcs = [...persist, ...trans];
     this.world.arcsData(this.arcs);
   }
 

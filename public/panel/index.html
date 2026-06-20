@@ -12,7 +12,7 @@
   <!-- ====================== LOGIN ====================== -->
   <section id="login" class="login">
     <form id="login-form" class="login-card" autocomplete="on">
-      <div class="brand"><span class="plug">🔌</span> <b>Nexus</b> Bridge</div>
+      <div class="brand"><img id="login-logo" class="logo" src="assets/logo.png" alt="" /><span class="plug">🔌</span> <b>Nexus</b> Bridge</div>
       <p class="sub">Console de integração · acesso restrito</p>
       <label>E-mail
         <input id="email" type="email" required placeholder="voce@nexus.com" autocomplete="username" />
@@ -20,69 +20,83 @@
       <label>Senha
         <input id="password" type="password" required placeholder="••••••••" autocomplete="current-password" />
       </label>
+      <label class="remember"><input id="remember" type="checkbox" checked /> <span>Lembrar de mim neste dispositivo</span></label>
       <button id="login-btn" type="submit">Entrar</button>
       <div id="login-error" class="error" hidden></div>
       <p class="hint">Login via Firebase · somente contas autorizadas.</p>
     </form>
   </section>
 
-  <!-- ====================== PAINEL ====================== -->
+  <!-- ====================== PAINEL (tela única) ====================== -->
   <main id="panel" class="panel" hidden>
     <header class="topbar">
-      <div class="brand sm"><span class="plug">🔌</span> <b>Nexus</b> Bridge <span class="tag">console</span></div>
-      <div class="conn">
-        <span id="conn-dot" class="dot off"></span>
-        <span id="conn-label">conectando…</span>
-      </div>
-      <div class="me">
-        <span id="me-email">—</span>
-        <button id="logout-btn" class="ghost">Sair</button>
-      </div>
+      <div class="brand sm"><img id="brand-logo" class="logo" src="assets/logo.png" alt="" /><span class="plug">🔌</span> <b>Nexus</b> Bridge <span class="tag">console</span></div>
+      <div class="conn"><span id="conn-dot" class="dot off"></span><span id="conn-label">conectando…</span></div>
+      <div class="topbar-spacer"></div>
+      <button id="sync-btn" class="ghost sm" title="Recarregar apps/servidores do banco">⟳ Sincronizar</button>
+      <div class="me"><span id="me-email">—</span><button id="logout-btn" class="ghost sm">Sair</button></div>
     </header>
 
-    <section class="cards" id="cards">
-      <div class="card"><div class="k">Requisições</div><div class="v" id="m-req">0</div><div class="u" id="m-rps">0/s</div></div>
-      <div class="card"><div class="k">Entrada (↓ bridge)</div><div class="v" id="m-in">0 B</div><div class="u">total recebido</div></div>
-      <div class="card"><div class="k">Saída (↑ bridge)</div><div class="v" id="m-out">0 B</div><div class="u">total enviado</div></div>
-      <div class="card"><div class="k">Vazão ao vivo</div><div class="v" id="m-rate">0 bps</div><div class="u">janela de 3s</div></div>
-      <div class="card"><div class="k">Erros</div><div class="v err" id="m-err">0</div><div class="u" id="m-up">uptime —</div></div>
-    </section>
+    <div class="workspace">
+      <!-- COLUNA ESQUERDA: KPIs + analytics -->
+      <aside class="col col-left">
+        <div class="kpis">
+          <div class="kpi"><div class="k">Requisições</div><div class="v" id="m-req">0</div><div class="u" id="m-rps">0/s</div></div>
+          <div class="kpi"><div class="k">Vazão ao vivo</div><div class="v" id="m-rate">0 bps</div><div class="u">janela 3s</div></div>
+          <div class="kpi"><div class="k">↓ Entrada</div><div class="v" id="m-in">0 B</div><div class="u">total</div></div>
+          <div class="kpi"><div class="k">↑ Saída</div><div class="v" id="m-out">0 B</div><div class="u">total</div></div>
+          <div class="kpi"><div class="k">Erros</div><div class="v err" id="m-err">0</div><div class="u" id="m-up">uptime —</div></div>
+        </div>
+        <div class="ana">
+          <div class="ana-block"><h4>Quem mais pede</h4><div id="ana-apps" class="bars muted">—</div></div>
+          <div class="ana-block"><h4>De onde sai (fontes)</h4><div id="ana-ds" class="bars muted">—</div></div>
+          <div class="ana-block"><h4>Status das respostas</h4><div id="ana-status" class="bars muted">—</div></div>
+        </div>
+      </aside>
 
-    <section class="stage">
-      <div class="map-wrap">
+      <!-- CENTRO: globo -->
+      <section class="col globe-cell">
         <div class="map-legend">
           <span><i class="sw c-app"></i> consumidor</span>
           <span><i class="sw c-bridge"></i> bridge</span>
-          <span><i class="sw c-src"></i> fonte de dados</span>
+          <span><i class="sw c-src"></i> fonte</span>
           <span><i class="sw c-err"></i> erro</span>
         </div>
-        <div class="view-toggle">
-          <button id="view-flow" class="vt active" type="button">Fluxo</button>
-          <button id="view-geo" class="vt" type="button">Mapa</button>
-        </div>
-        <canvas id="flow"></canvas>
-        <div id="geo" hidden></div>
-      </div>
+        <div id="geo"></div>
+      </section>
 
-      <aside class="side">
-        <div class="side-h">Fluxo recente</div>
+      <!-- COLUNA DIREITA: tráfego ao vivo -->
+      <aside class="col col-right">
+        <div class="panel-h">Tráfego ao vivo <span class="muted">quem → de onde → pra onde</span></div>
         <ul id="feed" class="feed"></ul>
       </aside>
-    </section>
+    </div>
 
-    <!-- ================== APPS / CHAVES ================== -->
-    <section class="apps-section">
-      <div class="apps-header">
-        <div>
-          <b>Apps registrados</b>
-          <span class="muted">chaves <code>nxs_</code> para backends externos</span>
+    <!-- LINHA INFERIOR: gestão (tudo visível) -->
+    <div class="manage">
+      <section class="mpanel">
+        <div class="panel-h">Servidores · fontes <button id="add-ds-btn" class="ghost sm" type="button">+ Adicionar</button></div>
+        <div id="ds-list" class="ds-list muted">carregando…</div>
+      </section>
+
+      <section class="mpanel">
+        <div class="panel-h">Apps · chaves <code>nxs_</code> <button id="new-app-btn" class="btn-primary sm" type="button">+ Novo app</button></div>
+        <div id="apps-list" class="apps-list muted">carregando…</div>
+      </section>
+
+      <section class="mpanel">
+        <div class="panel-h">Explorar dados</div>
+        <div class="exp-controls">
+          <select id="ds"></select>
+          <input id="resource" placeholder="coleção/tabela" />
+          <input id="qlimit" type="number" min="1" max="200" value="20" title="limit" />
+          <button id="run" class="sm" type="button">Consultar</button>
         </div>
-        <button id="new-app-btn" class="btn-primary">+ Novo app</button>
-      </div>
-      <div id="apps-list" class="apps-list muted">carregando…</div>
-    </section>
+        <div id="exp-out" class="exp-out muted">selecione um datasource e um recurso.</div>
+      </section>
+    </div>
 
-    <!-- Modal: formulário de novo app -->
+    <!-- Modal: novo app -->
     <div id="app-modal" class="modal-overlay" hidden>
       <div class="modal-card">
         <div class="modal-title">Registrar novo app</div>
@@ -101,7 +115,7 @@
       </div>
     </div>
 
-    <!-- Modal: exibição da chave gerada (UMA VEZ) -->
+    <!-- Modal: chave gerada -->
     <div id="key-modal" class="modal-overlay" hidden>
       <div class="modal-card">
         <div class="modal-title">Chave gerada — copie agora</div>
@@ -117,19 +131,19 @@
       </div>
     </div>
 
-    <section class="explorer">
-      <div class="exp-h">
-        <b>Explorador de dados</b>
-        <span class="muted">leitura via Data API (escrita exige confirmação)</span>
+    <!-- Modal: adicionar servidor (em breve) -->
+    <div id="ds-modal" class="modal-overlay" hidden>
+      <div class="modal-card">
+        <div class="modal-title">Adicionar servidor / fonte</div>
+        <div id="ds-modal-body" class="muted">
+          O cadastro de novos servidores em runtime (Firebase / Supabase / backend)
+          está sendo finalizado. Por ora, configure via variáveis de ambiente no Render.
+        </div>
+        <div class="modal-actions">
+          <button id="ds-close" class="btn-primary">Fechar</button>
+        </div>
       </div>
-      <div class="exp-controls">
-        <select id="ds"></select>
-        <input id="resource" placeholder="coleção/tabela (ex.: leads, public.bugs)" />
-        <input id="qlimit" type="number" min="1" max="200" value="20" title="limit" />
-        <button id="run">Consultar</button>
-      </div>
-      <div id="exp-out" class="exp-out muted">selecione um datasource e um recurso.</div>
-    </section>
+    </div>
   </main>
 
   <script type="module" src="app.js"></script>

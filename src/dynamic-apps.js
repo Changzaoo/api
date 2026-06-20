@@ -96,6 +96,12 @@ export function getDynamicRegistry() {
   return { apps: _apps, byHash: _byHash };
 }
 
+/** Força um reload imediato dos apps dinâmicos do banco (botão sincronizar). */
+export async function syncDynamicApps() {
+  await reload();
+  return _apps.size;
+}
+
 /** Lista apps dinâmicos ativos (para o painel). */
 export function listDynamicApps() {
   return [..._apps.values()].map((a) => ({
