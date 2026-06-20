@@ -36,9 +36,13 @@ export function makeFirebaseVerifier({ appName, saB64, adminEmails, checkRevoked
   async function ensureAuth() {
     if (auth) return auth;
     if (!saB64) throw new ApiError(503, "auth_unconfigured", "login de usuário indisponível: FIREBASE_SA_GARDEN_B64 não configurada");
-    const { getFirebaseApp } = await import("../datasources/firebaseApp.js");
-    auth = getFirebaseApp(appName, saB64).auth();
-    return auth;
+    try {
+      const { getFirebaseApp } = await import("../datasources/firebaseApp.js");
+      auth = getFirebaseApp(appName, saB64).auth();
+      return auth;
+    } catch (e) {
+      throw new ApiError(503, "auth_init_failed", "falha ao inicializar firebase-admin: " + e.message);
+    }
   }
 
   /** Verifica o token e devolve { uid, email, name } ou lança ApiError. */
@@ -49,16 +53,24 @@ export function makeFirebaseVerifier({ appName, saB64, adminEmails, checkRevoked
     const hit = cache.get(key);
     if (hit && now < hit.exp - SKEW_MS) return hit.decoded;
 
-    const a = await ensureAuth();
+    let a;
+    try {
+      a = await ensureAuth();
+    } catch (e) {
+      throw e instanceof ApiError ? e : new ApiError(503, "auth_unavailable", e.message);
+    }
+
     let decoded;
     try {
       decoded = await a.verifyIdToken(token, checkRevoked);
-    } catch {
-      throw new ApiError(401, "unauthorized", "ID token inválido ou expirado");
+    } catch (e) {
+      throw new ApiError(401, "unauthorized", "ID token inválido ou expirado: " + (e.code || e.message));
     }
 
     const email = String(decoded.email || "").toLowerCase();
-    if (!decoded.email_verified) {
+    // email_verified: exige verificação só se o e-mail não estiver na allowlist
+    // (permite usuários criados via Admin SDK sem verificação de e-mail).
+    if (!decoded.email_verified && !allow.has(email)) {
       throw new ApiError(403, "email_unverified", "e-mail não verificado no Firebase");
     }
     if (!allow.has(email)) {

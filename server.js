@@ -112,6 +112,7 @@ app.use(helmet({
       "script-src": ["'self'", "https://www.gstatic.com", "https://www.googleapis.com"],
       "connect-src": [
         "'self'",
+        "https://www.gstatic.com",
         "https://*.googleapis.com",
         "https://*.firebaseio.com",
         "https://securetoken.googleapis.com",
