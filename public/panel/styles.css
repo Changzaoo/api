@@ -17,6 +17,10 @@
 }
 
 * { box-sizing: border-box; }
+/* Garante que o atributo `hidden` vença regras de display de classes
+   (ex.: .modal-overlay { display:flex }). Sem isto, os modais aparecem
+   na carga da página por cima do login. */
+[hidden] { display: none !important; }
 html, body { height: 100%; margin: 0; }
 body {
   background: radial-gradient(1200px 600px at 70% -10%, #14213d 0%, var(--bg) 55%) fixed;

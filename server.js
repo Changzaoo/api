@@ -176,7 +176,11 @@ app.get("/", (_req, res) => {
 
 // Painel web embutido (estático). Assets são públicos; toda a API
 // continua exigindo credencial válida.
-app.use("/panel", express.static(path.join(__dirname, "public", "panel")));
+app.use("/panel", express.static(path.join(__dirname, "public", "panel"), {
+  // Revalida sempre (via ETag): após um deploy o browser pega CSS/JS novo
+  // em vez de servir uma versão antiga em cache.
+  setHeaders: (res) => res.setHeader("Cache-Control", "no-cache"),
+}));
 
 // SSE: validado por TICKET (EventSource não envia headers). Fora do
 // authDual de propósito; o ticket carrega o principal.
