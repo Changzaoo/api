@@ -62,14 +62,14 @@ export function makeSupabaseAdapter({ url, key, bucket: defaultBucket }) {
     return { items: data || [], count: count ?? (data ? data.length : 0) };
   }
 
-  async function get(resource, id, query) {
-    const { data, error } = await table(resource).select("*").eq(query.pk, id).maybeSingle();
+  async function get(resource, id, query = {}) {
+    const { data, error } = await table(resource).select("*").eq(query.pk || "id", id).maybeSingle();
     if (error) throw upstreamError(error.message);
     if (!data) throw notFound(`registro "${id}" não encontrado em "${resource}"`);
     return data;
   }
 
-  async function create(resource, body, query) {
+  async function create(resource, body, query = {}) {
     const builder = table(resource);
     const op = query.upsert
       ? builder.upsert(body, query.onConflict ? { onConflict: query.onConflict } : undefined)
@@ -79,15 +79,15 @@ export function makeSupabaseAdapter({ url, key, bucket: defaultBucket }) {
     return Array.isArray(data) && data.length === 1 ? data[0] : data;
   }
 
-  async function update(resource, id, body, query) {
-    const { data, error } = await table(resource).update(body).eq(query.pk, id).select();
+  async function update(resource, id, body, query = {}) {
+    const { data, error } = await table(resource).update(body).eq(query.pk || "id", id).select();
     if (error) throw upstreamError(error.message);
     if (!data || data.length === 0) throw notFound(`registro "${id}" não encontrado em "${resource}"`);
     return data[0];
   }
 
-  async function remove(resource, id, query) {
-    const { error } = await table(resource).delete().eq(query.pk, id);
+  async function remove(resource, id, query = {}) {
+    const { error } = await table(resource).delete().eq(query.pk || "id", id);
     if (error) throw upstreamError(error.message);
     return { id, deleted: true };
   }

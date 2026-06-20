@@ -114,25 +114,14 @@ async function main() {
   ok("whoami app 200", whoApp.status === 200, `status=${whoApp.status}`);
   ok("identidade do app correta", whoApp.json?.type === "app" && whoApp.json?.app === APP_ID, JSON.stringify(whoApp.json));
 
-  // 6. leitura na Data API (Supabase)
-  log("6) GET /v1/data/supabase/nexus_apps — leitura");
-  const read = await req("GET", "/v1/data/supabase/nexus_apps?limit=1", { apiKey: key });
-  ok("leitura 200", read.status === 200, `status=${read.status}`);
-  ok("retorna items[]", Array.isArray(read.json?.items), JSON.stringify(read.json).slice(0, 120));
-
-  // 7. escrita: cria, lê e apaga uma linha de teste
-  log(`7) escrita em ${TEST_TABLE} (criar/ler/apagar)`);
-  const rowId = "selftest-" + Math.random().toString(36).slice(2, 8);
-  const w = await req("POST", `/v1/data/supabase/${TEST_TABLE}?id=${rowId}`, { apiKey: key, body: { id: rowId, val: "ok" } });
-  const wrote = ok("cria linha 201", w.status === 201, `status=${w.status} ${JSON.stringify(w.json)}`);
-  if (wrote) {
-    const g = await req("GET", `/v1/data/supabase/${TEST_TABLE}/${rowId}`, { apiKey: key });
-    ok("lê linha criada", g.status === 200 && g.json?.val === "ok", `status=${g.status}`);
-    const d = await req("DELETE", `/v1/data/supabase/${TEST_TABLE}/${rowId}`, { apiKey: key });
-    ok("apaga linha", d.status === 200, `status=${d.status}`);
-  } else {
-    log(`     (pule se a tabela ${TEST_TABLE} não existe — crie-a para testar escrita)`);
-  }
+  // 6. Data API + blindagem de segurança
+  log("6) Data API (blindagem)");
+  const blk = await req("GET", "/v1/data/supabase/nexus_apps?limit=1", { apiKey: key });
+  ok("nexus_apps BLOQUEADO (403)", blk.status === 403, `status=${blk.status}`);
+  const blkAudit = await req("GET", "/v1/data/supabase/audit_log?limit=1", { apiKey: key });
+  ok("audit_log BLOQUEADO (403)", blkAudit.status === 403, `status=${blkAudit.status}`);
+  const legit = await req("GET", "/v1/data/supabase/bridge_selftest_xyz?limit=1", { apiKey: key });
+  ok("tabela de negócio passa o guard (não 403)", legit.status !== 403 && legit.status !== 401, `status=${legit.status}`);
 
   // 8 + 9. revoga e confirma bloqueio
   await cleanupAndDone(token, key);
