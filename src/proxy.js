@@ -71,6 +71,9 @@ export function makeProxyRouter(getRegistry, { timeoutMs = 15000 } = {}) {
       res.status(upstream.status);
       const ct = upstream.headers.get("content-type");
       if (ct) res.setHeader("content-type", ct);
+      // preserva o nome/anexo de downloads (raw com ?download, bundle zip/md)
+      const cd = upstream.headers.get("content-disposition");
+      if (cd) res.setHeader("content-disposition", cd);
       res.setHeader("x-nexus-target", targetId);
       res.send(buf);
     } catch (e) {
