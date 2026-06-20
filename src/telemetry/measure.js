@@ -65,6 +65,12 @@ export function measure(req, res, next) {
   res.on("finish", () => {
     const kind = classify(fullPath);
     const { target, datasource } = routeContext(fullPath, kind);
+
+    // IP a geolocalizar: apps autenticados podem encaminhar o IP do
+    // USUÁRIO FINAL do site via X-Nexus-Client-IP (ex.: o proxy do CRM
+    // repassa o visitante). Senão, o IP de quem chamou a Bridge.
+    const fwd = req.principal?.type === "app" ? req.get("x-nexus-client-ip") : null;
+    const clientIp = (fwd && fwd.split(",")[0].trim()) || req.ip;
     const durationMs = Number(process.hrtime.bigint() - start) / 1e6;
     const status = res.statusCode;
     const ok = status < 400;
@@ -90,8 +96,8 @@ export function measure(req, res, next) {
       durationMs: +durationMs.toFixed(2),
       bytesPerSec,
       ok,
-      ip: req.ip,
-      geo: geoForIp(req.ip),
+      ip: clientIp,
+      geo: geoForIp(clientIp),
     };
 
     try {

@@ -126,8 +126,10 @@ function switchView(v) {
 
 async function ensureGeo() {
   if (!geo) {
-    if (typeof L === "undefined") {
-      $("geo").innerHTML = '<div class="geo-fallback">mapa indisponível (Leaflet não carregou)</div>';
+    let tries = 0;
+    while (typeof Globe === "undefined" && tries++ < 40) { await new Promise((r) => setTimeout(r, 100)); }
+    if (typeof Globe === "undefined") {
+      $("geo").innerHTML = '<div class="geo-fallback">globo indisponível (CDN bloqueada)</div>';
       return;
     }
     try { const r = await getJSON("/v1/geo"); geoServers = r.servers || {}; }
