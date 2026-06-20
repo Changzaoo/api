@@ -190,6 +190,58 @@ app.get("/v1/stream", (req, res) => {
   try { sseHandler(req, res); } catch (e) { sendError(res, e); }
 });
 
+// ---- Dados públicos decorativos do globo (cabos submarinos + satélites) ----
+// A Bridge busca de fontes abertas (sem CORS no servidor) e cacheia; o painel
+// consome same-origin. Falhas degradam para vazio — nunca quebram o globo.
+const _decorCache = new Map();
+async function cachedFetch(key, url, ttlMs, asText) {
+  const hit = _decorCache.get(key);
+  if (hit && Date.now() < hit.exp) return hit.data;
+  const r = await fetch(url, { signal: AbortSignal.timeout(9000), headers: { "user-agent": "nexus-bridge" } });
+  if (!r.ok) throw new Error(`upstream ${r.status}`);
+  const data = asText ? await r.text() : await r.json();
+  _decorCache.set(key, { data, exp: Date.now() + ttlMs });
+  return data;
+}
+
+// Cabos submarinos (TeleGeography, dados abertos) → paths [lat,lng] decimados.
+app.get("/cables", async (_req, res) => {
+  try {
+    const geo = await cachedFetch(
+      "cables",
+      "https://www.submarinecablemap.com/api/v3/cable/cable-geo.json",
+      24 * 3600_000, false);
+    const paths = [];
+    for (const f of geo.features || []) {
+      const g = f.geometry; if (!g || !g.coordinates) continue;
+      const lines = g.type === "MultiLineString" ? g.coordinates : [g.coordinates];
+      for (const line of lines) {
+        const pts = [];
+        for (let i = 0; i < line.length; i += 3) { const c = line[i]; if (c) pts.push([c[1], c[0]]); }
+        if (pts.length > 1) paths.push(pts);
+      }
+    }
+    res.json({ paths });
+  } catch (e) { res.json({ paths: [], error: e.message }); }
+});
+
+// Satélites reais (CelesTrak, TLE) → [{name,l1,l2}] p/ propagação no cliente.
+app.get("/satellites", async (_req, res) => {
+  try {
+    const txt = await cachedFetch(
+      "sats",
+      "https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=tle",
+      3600_000, true);
+    const lines = txt.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const sats = [];
+    for (let i = 0; i + 2 < lines.length; i += 3) {
+      const name = lines[i], l1 = lines[i + 1], l2 = lines[i + 2];
+      if (l1?.startsWith("1 ") && l2?.startsWith("2 ")) sats.push({ name, l1, l2 });
+    }
+    res.json({ sats: sats.slice(0, 110) });
+  } catch (e) { res.json({ sats: [], error: e.message }); }
+});
+
 // ---- Endpoints autenticados ----
 const v1 = express.Router();
 v1.use(limiter);

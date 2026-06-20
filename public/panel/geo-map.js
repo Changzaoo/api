@@ -69,6 +69,67 @@ export class GeoMap {
     this._ro = new ResizeObserver(() => this._size());
     this._ro.observe(this.el);
     this.ready = true;
+
+    // Camadas decorativas (degradam para nada se a fonte falhar).
+    this._loadCables();
+    this._loadSatellites();
+  }
+
+  // Cabos submarinos reais (TeleGeography via /cables) — corrente sutil.
+  async _loadCables() {
+    try {
+      const r = await fetch("/cables");
+      const { paths } = await r.json();
+      if (!paths || !paths.length) return;
+      this.world.pathsData(paths)
+        .pathPointLat((p) => p[0]).pathPointLng((p) => p[1])
+        .pathColor(() => "rgba(54,224,200,0.16)")
+        .pathStroke(0.4)
+        .pathDashLength(0.02).pathDashGap(0.012)
+        .pathDashInitialGap(() => Math.random()).pathDashAnimateTime(40000)
+        .pathTransitionDuration(0);
+    } catch (e) { console.warn("[geo] cabos submarinos indisponíveis:", e.message); }
+  }
+
+  // Satélites reais em órbita (CelesTrak via /satellites) propagados ao vivo.
+  async _loadSatellites() {
+    try {
+      let tries = 0;
+      while (typeof satellite === "undefined" && tries++ < 40) await new Promise((r) => setTimeout(r, 100));
+      if (typeof satellite === "undefined") return;
+      const r = await fetch("/satellites");
+      const { sats } = await r.json();
+      if (!sats || !sats.length) return;
+      this.satrecs = sats.map((s) => {
+        try { return { name: s.name, rec: satellite.twoline2satrec(s.l1, s.l2) }; } catch { return null; }
+      }).filter(Boolean);
+      if (!this.satrecs.length) return;
+      this.world
+        .htmlElementsData(this._satPositions())
+        .htmlLat("lat").htmlLng("lng").htmlAltitude("alt")
+        .htmlElement((d) => { const el = document.createElement("div"); el.className = "sat-dot"; el.title = d.name; return el; });
+      this._satTimer = setInterval(() => {
+        try { this.world.htmlElementsData(this._satPositions()); } catch { /* */ }
+      }, 3000);
+    } catch (e) { console.warn("[geo] satélites indisponíveis:", e.message); }
+  }
+
+  _satPositions() {
+    const now = new Date();
+    const gmst = satellite.gstime(now);
+    const out = [];
+    for (const s of this.satrecs) {
+      try {
+        const pv = satellite.propagate(s.rec, now);
+        if (!pv || !pv.position) continue;
+        const gd = satellite.eciToGeodetic(pv.position, gmst);
+        const lat = satellite.degreesLat(gd.latitude);
+        const lng = satellite.degreesLong(gd.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+        out.push({ name: s.name, lat, lng, alt: Math.max(0.02, Math.min(0.6, gd.height / 6371)) });
+      } catch { /* propagação falhou p/ este sat */ }
+    }
+    return out;
   }
 
   _size() {
@@ -120,6 +181,7 @@ export class GeoMap {
 
   destroy() {
     if (this._ro) { this._ro.disconnect(); this._ro = null; }
+    if (this._satTimer) { clearInterval(this._satTimer); this._satTimer = null; }
     this.ready = false;
   }
 }

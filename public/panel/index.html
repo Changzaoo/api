@@ -6,6 +6,7 @@
   <title>Nexus Bridge · Console</title>
   <link rel="stylesheet" href="styles.css" />
   <script defer src="https://unpkg.com/globe.gl"></script>
+  <script defer src="https://unpkg.com/satellite.js@5.0.0/dist/satellite.min.js"></script>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔌</text></svg>" />
 </head>
 <body>
@@ -56,11 +57,17 @@
 
       <!-- CENTRO: globo -->
       <section class="col globe-cell">
+        <div class="space-bg" aria-hidden="true">
+          <span class="planet p1"></span>
+          <span class="planet p2"></span>
+        </div>
         <div class="map-legend">
           <span><i class="sw c-app"></i> consumidor</span>
           <span><i class="sw c-bridge"></i> bridge</span>
           <span><i class="sw c-src"></i> fonte</span>
           <span><i class="sw c-err"></i> erro</span>
+          <span><i class="sw c-cable"></i> cabos</span>
+          <span><i class="sw c-sat"></i> satélites</span>
         </div>
         <div id="geo"></div>
       </section>
