@@ -45,7 +45,7 @@ export const APPS = {
       basePath: "/api/integration",
       upstreamHeader: "x-api-key",
       upstreamKeyEnv: "MIDIA_UPSTREAM_KEY",
-      routes: ["health", "clients", "client", "client/*"],
+      routes: ["health", "clients", "client", "client/*", "client/*/raw", "client/*/doc-html", "client/*/bundle"],
     },
   },
 };
