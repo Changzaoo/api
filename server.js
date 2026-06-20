@@ -119,6 +119,7 @@ app.use(helmet({
         "https://*.firebaseio.com",
         "https://securetoken.googleapis.com",
         "https://identitytoolkit.googleapis.com",
+        "https://tle.ivanstanojevic.me",
         SUPABASE_HOST,
       ],
       "img-src": ["'self'", "data:", "https:"],

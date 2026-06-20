@@ -97,9 +97,12 @@ export class GeoMap {
       let tries = 0;
       while (typeof satellite === "undefined" && tries++ < 40) await new Promise((r) => setTimeout(r, 100));
       if (typeof satellite === "undefined") return;
-      const r = await fetch("/satellites");
-      const { sats } = await r.json();
-      if (!sats || !sats.length) return;
+      // Fonte com CORS (CelesTrak bloqueia datacenters; o navegador do
+      // usuário, com IP residencial, busca direto).
+      const r = await fetch("https://tle.ivanstanojevic.me/api/tle/?page-size=100");
+      const j = await r.json();
+      const sats = (j.member || []).map((m) => ({ name: m.name, l1: m.line1, l2: m.line2 }));
+      if (!sats.length) return;
       this.satrecs = sats.map((s) => {
         try { return { name: s.name, rec: satellite.twoline2satrec(s.l1, s.l2) }; } catch { return null; }
       }).filter(Boolean);
