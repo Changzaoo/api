@@ -7,12 +7,14 @@
 
 import { apiFetch } from "./api.js";
 
-// Datasources conhecidos e seus rótulos (ordem de exibição).
-const DATASOURCES = [
-  { id: "firestore-garden",   label: "Firestore · garden-backup (Mídia)" },
-  { id: "firestore-postflow", label: "Firestore · postflow-b893f (CRM)" },
-  { id: "supabase",           label: "Supabase · Postgres + Storage" },
-];
+// Apps gerados recebem acesso total de leitura/escrita a todos os
+// datasources (era o estado padrão dos checkboxes). Para restringir,
+// edite a coluna `data` da linha na tabela nexus_apps do Supabase.
+const FULL_ACCESS = {
+  "firestore-garden":   { read: ["*"], write: ["*"] },
+  "firestore-postflow": { read: ["*"], write: ["*"] },
+  "supabase":           { read: ["*"], write: ["*"] },
+};
 
 const $ = (id) => document.getElementById(id);
 
@@ -77,42 +79,12 @@ async function confirmRevoke(id, name) {
   }
 }
 
-// ---------- formulário de criação ----------
-
-function buildPermsUI() {
-  const wrap = $("app-perms");
-  wrap.innerHTML = DATASOURCES.map((ds) => `
-    <div class="perm-row">
-      <span class="perm-ds">${esc(ds.label)}</span>
-      <label class="perm-check">
-        <input type="checkbox" data-ds="${ds.id}" data-mode="read" />
-        <span>Leitura</span>
-      </label>
-      <label class="perm-check">
-        <input type="checkbox" data-ds="${ds.id}" data-mode="write" />
-        <span>Escrita</span>
-      </label>
-    </div>`).join("");
-}
-
-function collectPerms() {
-  const data = {};
-  $("app-perms").querySelectorAll("input[type=checkbox]").forEach((cb) => {
-    if (!cb.checked) return;
-    const { ds, mode } = cb.dataset;
-    if (!data[ds]) data[ds] = { read: [], write: [] };
-    data[ds][mode] = ["*"];
-  });
-  return data;
-}
-
 // ---------- modais ----------
 
 function openNewAppModal() {
   $("app-id").value = "";
   $("app-name").value = "";
   $("app-form-error").hidden = true;
-  buildPermsUI();
   $("app-modal").hidden = false;
   $("app-id").focus();
 }
@@ -130,13 +102,12 @@ async function submitNewApp() {
   if (!id) { errEl.textContent = "ID obrigatório."; errEl.hidden = false; return; }
   if (!name) { errEl.textContent = "Nome obrigatório."; errEl.hidden = false; return; }
 
-  const data = collectPerms();
   $("app-submit").disabled = true;
   try {
     const res = await apiFetch("/v1/admin/apps", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, name, data, allow: [] }),
+      body: JSON.stringify({ id, name, data: FULL_ACCESS, allow: [] }),
     });
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
