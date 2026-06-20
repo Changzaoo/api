@@ -29,6 +29,7 @@ import { makeAuthDual, requireAppType } from "./src/auth/dual.js";
 import { makeFirebaseVerifier } from "./src/auth/firebase.js";
 import { makeProxyRouter } from "./src/proxy.js";
 import { makeDataRouter } from "./src/data/router.js";
+import { serverLocations } from "./src/telemetry/geo.js";
 import { measure } from "./src/telemetry/measure.js";
 import { snapshot } from "./src/telemetry/metrics.js";
 import { sseHandler, issueTicket } from "./src/telemetry/sse.js";
@@ -109,7 +110,7 @@ app.use(helmet({
     useDefaults: true,
     directives: {
       "default-src": ["'self'"],
-      "script-src": ["'self'", "https://www.gstatic.com", "https://www.googleapis.com"],
+      "script-src": ["'self'", "https://www.gstatic.com", "https://www.googleapis.com", "https://unpkg.com"],
       "connect-src": [
         "'self'",
         "https://www.gstatic.com",
@@ -120,7 +121,7 @@ app.use(helmet({
         SUPABASE_HOST,
       ],
       "img-src": ["'self'", "data:", "https:"],
-      "style-src": ["'self'", "'unsafe-inline'"],
+      "style-src": ["'self'", "'unsafe-inline'", "https://unpkg.com"],
       "frame-src": ["https://garden-backup.firebaseapp.com"],
       "object-src": ["'none'"],
     },
@@ -213,6 +214,11 @@ v1.get("/whoami", (req, res) => {
     return { id, name: t?.name || id, online: !!t?.target?.baseUrl };
   });
   res.json({ type: "app", app: p.id, name: p.name, canCall: targets, data: Object.keys(p.data || {}) });
+});
+
+// Posições geográficas dos servidores/datasources (para o mapa do painel).
+v1.get("/geo", (_req, res) => {
+  res.json({ servers: serverLocations() });
 });
 
 // Catálogo de apps registrados (sem segredos).

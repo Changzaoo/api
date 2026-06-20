@@ -8,6 +8,7 @@
 import { auth, signInWithEmailAndPassword, onIdTokenChanged, signOut } from "./firebase-login.js";
 import { setToken, openStream, getJSON, humanBytes, humanBits } from "./api.js";
 import { FlowMap } from "./flow-map.js";
+import { GeoMap } from "./geo-map.js";
 import { initExplorer } from "./data-explorer.js";
 import { initAppsManager } from "./apps-manager.js";
 
@@ -17,6 +18,9 @@ const panelView = $("panel");
 
 let stream = null;
 let flow = null;
+let geo = null;
+let geoServers = null;
+const recentEvents = []; // buffer p/ popular o mapa quando aberto
 let metricsTimer = null;
 let liveRateTimer = null;
 let explorerReady = false;
@@ -43,6 +47,10 @@ $("login-form").addEventListener("submit", async (e) => {
 });
 
 $("logout-btn").addEventListener("click", () => signOut(auth));
+
+// Alterna entre o grafo de fluxo e o mapa geográfico.
+$("view-flow").addEventListener("click", () => switchView("flow"));
+$("view-geo").addEventListener("click", () => switchView("geo"));
 
 // Re-login forçado se a Bridge recusar o token (allowlist/expiração).
 window.addEventListener("nexus-unauth", () => { /* deixa o onIdTokenChanged revalidar */ });
@@ -98,9 +106,37 @@ function startStream() {
 
 function handleEvent(evt) {
   flow?.push(evt);
+  geo?.push(evt);
   pushFeed(evt);
+  recentEvents.push(evt);
+  if (recentEvents.length > 200) recentEvents.shift();
   const bytes = (evt.bytesIn || 0) + (evt.bytesOut || 0);
   rateWindow.push({ ts: Date.now(), bytes });
+}
+
+// ---------------- Alternância de visão (fluxo / mapa) ----------------
+function switchView(v) {
+  const isGeo = v === "geo";
+  $("flow").hidden = isGeo;
+  $("geo").hidden = !isGeo;
+  $("view-flow").classList.toggle("active", !isGeo);
+  $("view-geo").classList.toggle("active", isGeo);
+  if (isGeo) ensureGeo();
+}
+
+async function ensureGeo() {
+  if (!geo) {
+    if (typeof L === "undefined") {
+      $("geo").innerHTML = '<div class="geo-fallback">mapa indisponível (Leaflet não carregou)</div>';
+      return;
+    }
+    try { const r = await getJSON("/v1/geo"); geoServers = r.servers || {}; }
+    catch { geoServers = {}; }
+    geo = new GeoMap($("geo"));
+    geo.init(geoServers);
+    recentEvents.forEach((e) => geo.push(e)); // popula com o histórico recente
+  }
+  setTimeout(() => geo && geo.refresh(), 60);
 }
 
 function setConn(state) {

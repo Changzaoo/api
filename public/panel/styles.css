@@ -92,6 +92,22 @@ button.ghost { background: transparent; border: 1px solid var(--line); color: va
 .sw.c-app { background: var(--app); } .sw.c-bridge { background: var(--bridge); }
 .sw.c-src { background: var(--src); } .sw.c-err { background: var(--err); }
 
+/* ---- Mapa geográfico (Leaflet) + toggle de visão ---- */
+#geo { position: absolute; inset: 0; z-index: 1; }
+.leaflet-container { background: #070b14; font: inherit; }
+.geo-fallback { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--muted); font-size: 13px; }
+.view-toggle { position: absolute; top: 12px; right: 14px; z-index: 5; display: flex; gap: 4px; }
+.vt {
+  background: rgba(10,17,32,.82); border: 1px solid var(--line); color: var(--muted);
+  border-radius: 8px; padding: 4px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.vt.active { color: var(--txt); border-color: var(--bridge); box-shadow: 0 0 10px rgba(124,92,255,.35); }
+.leaflet-tooltip { background: #0c1426; border: 1px solid var(--line); color: var(--txt); font-size: 11px; }
+.leaflet-tooltip-top::before { border-top-color: var(--line); }
+.leaflet-control-zoom a { background: rgba(12,20,38,.92); color: var(--txt); border-color: var(--line); }
+.leaflet-control-attribution { background: rgba(7,11,20,.7); color: var(--muted); }
+.leaflet-control-attribution a { color: var(--muted); }
+
 .side { background: linear-gradient(180deg, var(--panel), var(--bg2)); border: 1px solid var(--line); border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; }
 .side-h { padding: 12px 14px; border-bottom: 1px solid var(--line); font-weight: 700; }
 .feed { list-style: none; margin: 0; padding: 6px; overflow-y: auto; flex: 1; max-height: 420px; }

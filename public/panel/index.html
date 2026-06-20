@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Nexus Bridge · Console</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔌</text></svg>" />
 </head>
 <body>
@@ -55,7 +57,12 @@
           <span><i class="sw c-src"></i> fonte de dados</span>
           <span><i class="sw c-err"></i> erro</span>
         </div>
+        <div class="view-toggle">
+          <button id="view-flow" class="vt active" type="button">Fluxo</button>
+          <button id="view-geo" class="vt" type="button">Mapa</button>
+        </div>
         <canvas id="flow"></canvas>
+        <div id="geo" hidden></div>
       </div>
 
       <aside class="side">

@@ -14,6 +14,7 @@
 import { randomUUID } from "node:crypto";
 import { bus } from "./bus.js";
 import { record } from "./metrics.js";
+import { geoForIp } from "./geo.js";
 
 /** Classifica a requisição em proxy | data | stream | other. */
 function classify(p) {
@@ -90,6 +91,7 @@ export function measure(req, res, next) {
       bytesPerSec,
       ok,
       ip: req.ip,
+      geo: geoForIp(req.ip),
     };
 
     try {
