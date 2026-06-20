@@ -38,6 +38,11 @@ export function makeProxyRouter(getRegistry, { timeoutMs = 15000 } = {}) {
     if (!t.baseUrl || !t.upstreamKey) {
       return res.status(503).json({ error: `destino "${targetId}" mal configurado (URL ou chave upstream ausente)` });
     }
+    // bloqueia travessia de caminho ANTES de casar a allowlist: "client/../x"
+    // casaria um glob "client/*/x" e o fetch normalizaria escapando do target.
+    if (path.includes("..") || path.includes("\\") || path.includes("//") || path.includes("%2e") || path.includes("%2f")) {
+      return res.status(400).json({ error: "caminho inválido" });
+    }
     if (!routeAllowed(path, t.routes)) {
       return res.status(403).json({ error: `rota "${path}" não liberada para "${targetId}"` });
     }
@@ -58,6 +63,7 @@ export function makeProxyRouter(getRegistry, { timeoutMs = 15000 } = {}) {
     const init = {
       method: req.method,
       headers,
+      redirect: "manual", // não seguir redirects do upstream (reduz superfície SSRF)
       signal: AbortSignal.timeout(timeoutMs),
     };
     if (hasBody) {
@@ -65,9 +71,14 @@ export function makeProxyRouter(getRegistry, { timeoutMs = 15000 } = {}) {
       if (!headers["content-type"]) headers["content-type"] = "application/json";
     }
 
+    const MAX_BYTES = 25 * 1024 * 1024; // teto p/ evitar exaustão de memória
     try {
       const upstream = await fetch(url, init);
-      const buf = Buffer.from(await upstream.arrayBuffer());
+      const declared = Number(upstream.headers.get("content-length") || 0);
+      if (declared > MAX_BYTES) return res.status(502).json({ error: "resposta do upstream excede o limite" });
+      const ab = await upstream.arrayBuffer();
+      if (ab.byteLength > MAX_BYTES) return res.status(502).json({ error: "resposta do upstream excede o limite" });
+      const buf = Buffer.from(ab);
       res.status(upstream.status);
       const ct = upstream.headers.get("content-type");
       if (ct) res.setHeader("content-type", ct);
@@ -78,10 +89,11 @@ export function makeProxyRouter(getRegistry, { timeoutMs = 15000 } = {}) {
       res.send(buf);
     } catch (e) {
       const isTimeout = e?.name === "TimeoutError" || e?.name === "AbortError";
+      if (!isTimeout) console.error(`[proxy] falha ao contatar "${targetId}":`, e?.message);
       res.status(isTimeout ? 504 : 502).json({
         error: isTimeout
           ? `tempo esgotado ao contatar "${targetId}"`
-          : `falha ao contatar "${targetId}": ${e.message}`,
+          : `falha ao contatar "${targetId}"`,
       });
     }
   };
