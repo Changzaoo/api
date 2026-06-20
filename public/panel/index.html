@@ -64,6 +64,54 @@
       </aside>
     </section>
 
+    <!-- ================== APPS / CHAVES ================== -->
+    <section class="apps-section">
+      <div class="apps-header">
+        <div>
+          <b>Apps registrados</b>
+          <span class="muted">chaves <code>nxs_</code> para backends externos</span>
+        </div>
+        <button id="new-app-btn" class="btn-primary">+ Novo app</button>
+      </div>
+      <div id="apps-list" class="apps-list muted">carregando…</div>
+    </section>
+
+    <!-- Modal: formulário de novo app -->
+    <div id="app-modal" class="modal-overlay" hidden>
+      <div class="modal-card">
+        <div class="modal-title">Registrar novo app</div>
+        <label>ID (slug único, ex.: <code>meusite</code>)
+          <input id="app-id" type="text" placeholder="meusite" autocomplete="off" />
+        </label>
+        <label>Nome legível
+          <input id="app-name" type="text" placeholder="Meu Site" autocomplete="off" />
+        </label>
+        <div class="perm-label">Permissões de dados <span class="muted">(define o que o app pode ler/escrever)</span></div>
+        <div id="app-perms" class="app-perms"></div>
+        <div id="app-form-error" class="error" hidden></div>
+        <div class="modal-actions">
+          <button id="app-cancel" class="ghost">Cancelar</button>
+          <button id="app-submit" class="btn-primary">Gerar chave</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: exibição da chave gerada (UMA VEZ) -->
+    <div id="key-modal" class="modal-overlay" hidden>
+      <div class="modal-card">
+        <div class="modal-title">Chave gerada — copie agora</div>
+        <p class="muted key-warn">Esta chave <b>não será exibida novamente</b>. Copie e guarde em segurança.</p>
+        <div class="key-box">
+          <code id="key-value"></code>
+          <button id="key-copy" class="ghost sm" title="Copiar">Copiar</button>
+        </div>
+        <p class="muted">Use como <code>x-api-key: &lt;chave&gt;</code> no backend do app.</p>
+        <div class="modal-actions">
+          <button id="key-close" class="btn-primary">Entendi, já copiei</button>
+        </div>
+      </div>
+    </div>
+
     <section class="explorer">
       <div class="exp-h">
         <b>Explorador de dados</b>

@@ -9,6 +9,7 @@ import { auth, signInWithEmailAndPassword, onIdTokenChanged, signOut } from "./f
 import { setToken, openStream, getJSON, humanBytes, humanBits } from "./api.js";
 import { FlowMap } from "./flow-map.js";
 import { initExplorer } from "./data-explorer.js";
+import { initAppsManager } from "./apps-manager.js";
 
 const $ = (id) => document.getElementById(id);
 const loginView = $("login");
@@ -19,6 +20,7 @@ let flow = null;
 let metricsTimer = null;
 let liveRateTimer = null;
 let explorerReady = false;
+let appsReady = false;
 
 // Janela deslizante de bytes para a "vazão ao vivo".
 const rateWindow = []; // { ts, bytes }
@@ -70,6 +72,7 @@ async function openPanel(user) {
 
   if (!flow) flow = new FlowMap($("flow"));
   if (!explorerReady) { initExplorer(); explorerReady = true; }
+  if (!appsReady) { initAppsManager(); appsReady = true; }
 
   startStream();
   startMetrics();

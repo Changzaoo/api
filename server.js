@@ -33,7 +33,14 @@ import { measure } from "./src/telemetry/measure.js";
 import { snapshot } from "./src/telemetry/metrics.js";
 import { sseHandler, issueTicket } from "./src/telemetry/sse.js";
 import { startAudit } from "./src/telemetry/audit.js";
-import { sendError, forbidden } from "./src/util/errors.js";
+import { sendError, forbidden, badRequest } from "./src/util/errors.js";
+import {
+  startDynamicApps,
+  getDynamicRegistry,
+  listDynamicApps,
+  createDynamicApp,
+  revokeDynamicApp,
+} from "./src/dynamic-apps.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 8080;
@@ -42,9 +49,19 @@ const SUPABASE_HOST = (process.env.SUPABASE_URL || "").replace(/\/+$/, "") || "h
 
 // ---- Resolução estática (env é estável em runtime) ----
 const registry = resolveRegistry();
-const getRegistry = () => registry;
 const dsResolved = resolveDatasources();
 const getDatasources = () => dsResolved;
+
+// Registry dinâmico: mescla estático + apps registrados no Supabase.
+// getDynamicRegistry() retorna a visão atualizada a cada 60s.
+const getRegistry = () => {
+  const dyn = getDynamicRegistry();
+  if (!dyn.apps.size) return registry;
+  const byHash = new Map([...registry.byHash, ...dyn.byHash]);
+  const apps = { ...registry.apps };
+  dyn.apps.forEach((a, id) => { apps[id] = a; });
+  return { ...registry, apps, byHash };
+};
 
 const warnings = [...registry.warnings, ...dsResolved.warnings];
 if (warnings.length) {
@@ -68,6 +85,9 @@ const dataRouter = makeDataRouter(getRegistry, getDatasources);
 
 // Auditoria imutável escutando o bus de telemetria.
 startAudit(getDatasources);
+
+// Apps dinâmicos: carrega do Supabase e renova a cada 60s.
+startDynamicApps(getDatasources);
 
 const app = express();
 app.set("trust proxy", 1); // atrás do proxy do Render
@@ -197,6 +217,40 @@ v1.get("/apps", (_req, res) => {
       id: a.id, name: a.name, isTarget: !!a.target?.baseUrl,
     })),
   });
+});
+
+// Middleware: só admins humanos (login Firebase) acessam rotas /admin/*.
+const requireAdmin = (req, res, next) => {
+  if (req.principal?.type !== "user") return sendError(res, forbidden("exclusivo do painel admin"));
+  next();
+};
+
+// Admin: gerenciamento de apps dinâmicos (geração de chaves nxs_).
+v1.get("/admin/apps", requireAdmin, (_req, res) => {
+  res.json({ apps: listDynamicApps() });
+});
+
+v1.post("/admin/apps", requireAdmin, async (req, res) => {
+  const { id, name, data, allow } = req.body || {};
+  if (!id || !name) return sendError(res, badRequest("id e name são obrigatórios"));
+  try {
+    const result = await createDynamicApp(
+      { id, name, data: data || {}, allow: allow || [] },
+      req.principal.email,
+    );
+    res.status(201).json(result); // key exibida UMA VEZ; não é armazenada
+  } catch (e) {
+    sendError(res, badRequest(e.message));
+  }
+});
+
+v1.delete("/admin/apps/:id", requireAdmin, async (req, res) => {
+  try {
+    await revokeDynamicApp(req.params.id);
+    res.json({ ok: true, revoked: req.params.id });
+  } catch (e) {
+    sendError(res, badRequest(e.message));
+  }
 });
 
 // CORS: só em /v1 (APIs). Estáticos do painel são same-origin — não precisam.
