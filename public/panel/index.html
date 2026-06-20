@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nexus Bridge · Console</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔌</text></svg>" />
+</head>
+<body>
+  <!-- ====================== LOGIN ====================== -->
+  <section id="login" class="login">
+    <form id="login-form" class="login-card" autocomplete="on">
+      <div class="brand"><span class="plug">🔌</span> <b>Nexus</b> Bridge</div>
+      <p class="sub">Console de integração · acesso restrito</p>
+      <label>E-mail
+        <input id="email" type="email" required placeholder="voce@nexus.com" autocomplete="username" />
+      </label>
+      <label>Senha
+        <input id="password" type="password" required placeholder="••••••••" autocomplete="current-password" />
+      </label>
+      <button id="login-btn" type="submit">Entrar</button>
+      <div id="login-error" class="error" hidden></div>
+      <p class="hint">Login via Firebase · somente contas autorizadas.</p>
+    </form>
+  </section>
+
+  <!-- ====================== PAINEL ====================== -->
+  <main id="panel" class="panel" hidden>
+    <header class="topbar">
+      <div class="brand sm"><span class="plug">🔌</span> <b>Nexus</b> Bridge <span class="tag">console</span></div>
+      <div class="conn">
+        <span id="conn-dot" class="dot off"></span>
+        <span id="conn-label">conectando…</span>
+      </div>
+      <div class="me">
+        <span id="me-email">—</span>
+        <button id="logout-btn" class="ghost">Sair</button>
+      </div>
+    </header>
+
+    <section class="cards" id="cards">
+      <div class="card"><div class="k">Requisições</div><div class="v" id="m-req">0</div><div class="u" id="m-rps">0/s</div></div>
+      <div class="card"><div class="k">Entrada (↓ bridge)</div><div class="v" id="m-in">0 B</div><div class="u">total recebido</div></div>
+      <div class="card"><div class="k">Saída (↑ bridge)</div><div class="v" id="m-out">0 B</div><div class="u">total enviado</div></div>
+      <div class="card"><div class="k">Vazão ao vivo</div><div class="v" id="m-rate">0 bps</div><div class="u">janela de 3s</div></div>
+      <div class="card"><div class="k">Erros</div><div class="v err" id="m-err">0</div><div class="u" id="m-up">uptime —</div></div>
+    </section>
+
+    <section class="stage">
+      <div class="map-wrap">
+        <div class="map-legend">
+          <span><i class="sw c-app"></i> consumidor</span>
+          <span><i class="sw c-bridge"></i> bridge</span>
+          <span><i class="sw c-src"></i> fonte de dados</span>
+          <span><i class="sw c-err"></i> erro</span>
+        </div>
+        <canvas id="flow"></canvas>
+      </div>
+
+      <aside class="side">
+        <div class="side-h">Fluxo recente</div>
+        <ul id="feed" class="feed"></ul>
+      </aside>
+    </section>
+
+    <section class="explorer">
+      <div class="exp-h">
+        <b>Explorador de dados</b>
+        <span class="muted">leitura via Data API (escrita exige confirmação)</span>
+      </div>
+      <div class="exp-controls">
+        <select id="ds"></select>
+        <input id="resource" placeholder="coleção/tabela (ex.: leads, public.bugs)" />
+        <input id="qlimit" type="number" min="1" max="200" value="20" title="limit" />
+        <button id="run">Consultar</button>
+      </div>
+      <div id="exp-out" class="exp-out muted">selecione um datasource e um recurso.</div>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -23,6 +23,22 @@ services:
         value: "60000"
       - key: RATE_LIMIT_MAX
         value: "120"
+      - key: RATE_LIMIT_DATA_WRITE_MAX
+        value: "30"
+      - key: DATA_MAX_LIMIT
+        value: "200"
+      - key: DATA_UPLOAD_MAX
+        value: "26214400"
+      - key: TELEMETRY_BUFFER
+        value: "200"
+      - key: SSE_MAX_CLIENTS
+        value: "50"
+      - key: SUPABASE_STORAGE_BUCKET
+        value: nexus-media
+      - key: ADMIN_WRITE
+        value: "false"
+      - key: FIREBASE_CHECK_REVOKED
+        value: "false"
       # Segredos: definir manualmente no painel (sync:false NÃO grava valor aqui).
       - key: KEY_CRM
         sync: false
@@ -31,4 +47,16 @@ services:
       - key: MIDIA_URL
         sync: false
       - key: MIDIA_UPSTREAM_KEY
+        sync: false
+      # Data API — credenciais dos bancos (poder total: mantenha em segredo).
+      - key: FIREBASE_SA_GARDEN_B64
+        sync: false
+      - key: FIREBASE_SA_POSTFLOW_B64
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      # Painel — allowlist de e-mails autorizados (login Firebase).
+      - key: ADMIN_EMAILS
         sync: false
