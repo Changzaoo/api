@@ -253,24 +253,30 @@ v1.delete("/admin/apps/:id", requireAdmin, async (req, res) => {
   }
 });
 
-// CORS: só em /v1 (APIs). Estáticos do painel são same-origin — não precisam.
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
-  .split(",").map((s) => s.trim()).filter(Boolean);
-v1.use(cors({
+// CORS: somente nas rotas de dados/proxy (apps externos cross-origin).
+// Painel e /v1/whoami/apps são same-origin — CORS não é necessário.
+// Módulos ES do Chrome enviam Origin mesmo em same-origin; permitir o
+// próprio host evita o 403 mesmo que o browser mande o header.
+const allowedOrigins = new Set(
+  (process.env.ALLOWED_ORIGINS || "")
+    .split(",").map((s) => s.trim()).filter(Boolean)
+);
+const apiCors = cors({
   origin(origin, cb) {
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    // Sem Origin (server-to-server) ou origem conhecida → libera.
+    if (!origin || allowedOrigins.has(origin)) return cb(null, true);
     cb(new Error("origem não permitida pelo CORS"));
   },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "x-api-key", "x-request-id", "Idempotency-Key"],
   maxAge: 86400,
-}));
+});
 
 // Data API central (leitura/escrita em Firestore + Supabase).
-v1.use("/data", dataWriteLimiter, dataRouter);
+v1.use("/data", apiCors, dataWriteLimiter, dataRouter);
 
 // Roteamento genérico app -> app (exclusivo de apps).
-v1.all("/route/:target/*", requireAppType, makeProxyRouter(getRegistry));
+v1.all("/route/:target/*", apiCors, requireAppType, makeProxyRouter(getRegistry));
 
 app.use("/v1", v1);
 
