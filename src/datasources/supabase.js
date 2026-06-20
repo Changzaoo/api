@@ -43,14 +43,20 @@ export function makeSupabaseAdapter({ url, key, bucket: defaultBucket }) {
   }
 
   // ---- Postgres ----
-  async function list(resource, query) {
+  // Tolera queries parciais (chamadas internas como o reload de apps
+  // dinâmicos passam só { where, limit }, sem order/offset).
+  async function list(resource, query = {}) {
+    const where = query.where || [];
+    const order = query.order || [];
+    const offset = Number.isFinite(query.offset) ? query.offset : 0;
+    const limit = Number.isFinite(query.limit) ? query.limit : 50;
     let q = table(resource).select(
       query.select ? query.select.join(",") : "*",
       query.count ? { count: "exact" } : undefined,
     );
-    for (const w of query.where) q = applyWhere(q, w);
-    for (const o of query.order) q = q.order(o.field, { ascending: o.dir === "asc" });
-    q = q.range(query.offset, query.offset + query.limit - 1);
+    for (const w of where) q = applyWhere(q, w);
+    for (const o of order) q = q.order(o.field, { ascending: o.dir === "asc" });
+    q = q.range(offset, offset + limit - 1);
     const { data, error, count } = await q;
     if (error) throw upstreamError(error.message);
     return { items: data || [], count: count ?? (data ? data.length : 0) };
